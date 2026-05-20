@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perysmith GGP — JBP 2026 Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#f5f5f2;--surface:#fff;--surface2:#f0efeb;
+    --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+    --text:#1a1a1a;--text2:#5a5a5a;--text3:#999;
+    --orange:#e05a20;--orange-dim:rgba(224,90,32,0.08);--orange-border:rgba(224,90,32,0.2);
+    --green:#1a9e72;--green-dim:rgba(26,158,114,0.08);
+    --red:#d63050;--red-dim:rgba(214,48,80,0.08);
+    --blue:#2b72c8;--blue-dim:rgba(43,114,200,0.08);
+    --yellow:#c07c00;--yellow-dim:rgba(192,124,0,0.08);
+    --purple:#7c3aed;--purple-dim:rgba(124,58,237,0.08);--purple-border:rgba(124,58,237,0.2);
+    --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--r:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+  .header{padding:28px 32px 22px;background:var(--surface);border-bottom:.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+  .eyebrow{font-family:var(--mono);font-size:10px;color:var(--orange);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .header h1{font-size:20px;font-weight:600}
+  .header p{font-size:12px;color:var(--text2);margin-top:3px}
+  .badge{display:inline-block;padding:4px 12px;border-radius:20px;background:var(--orange-dim);border:.5px solid var(--orange-border);font-family:var(--mono);font-size:11px;color:var(--orange);font-weight:600;margin-bottom:4px}
+  .shop-id{font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+  /* ── Tab bar ── */
+  .tab-bar{background:var(--surface);border-bottom:.5px solid var(--border);padding:0 32px;display:flex;gap:0;position:sticky;top:0;z-index:100}
+  .tab-btn{padding:12px 22px;border:none;background:transparent;cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.06em;border-bottom:2.5px solid transparent;transition:all .15s;outline:none;display:flex;align-items:center;gap:7px}
+  .tab-btn:hover{color:var(--text2)}
+  .tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);font-weight:600}
+  .tab-btn.tab-eysin.active{color:var(--purple);border-bottom-color:var(--purple)}
+  .tab-btn.tab-ggp.active{color:var(--blue);border-bottom-color:var(--blue)}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+  /* ── Layout ── */
+  .main{padding:24px 32px;display:flex;flex-direction:column;gap:20px}
+  .sh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .sh .t{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+  .sh .l{flex:1;height:.5px;background:var(--border2)}
+  .kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  .kpi{background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .kpi.g{border-top:3px solid var(--green)}.kpi.o{border-top:3px solid var(--orange)}.kpi.b{border-top:3px solid var(--blue)}.kpi.p{border-top:3px solid var(--purple)}
+  .kpi .lbl{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+  .kpi .val{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1}
+  .kpi .sub{font-size:11px;color:var(--text2);margin-top:5px}
+  .up{color:var(--green)!important;font-weight:500}.down{color:var(--red)!important;font-weight:500}.warn{color:var(--yellow)!important;font-weight:500}
+  .card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .ct{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .prog-list{display:flex;flex-direction:column;gap:12px}
+  .prog-lbl{display:flex;justify-content:space-between;margin-bottom:5px}
+  .prog-lbl span:first-child{font-size:12px;color:var(--text2)}
+  .prog-lbl span:last-child{font-family:var(--mono);font-size:11px;font-weight:600}
+  .prog-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:3px}
+  .alert{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+  .alert:last-child{margin-bottom:0}
+  .ar{background:var(--red-dim);border:.5px solid rgba(214,48,80,.2);color:var(--red)}
+  .ay{background:var(--yellow-dim);border:.5px solid rgba(192,124,0,.2);color:var(--yellow)}
+  .ag{background:var(--green-dim);border:.5px solid rgba(26,158,114,.2);color:var(--green)}
+  .ai{font-size:14px;flex-shrink:0}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;text-align:right;padding:6px 10px;border-bottom:1px solid var(--border2);font-weight:500}
+  .tbl th:first-child{text-align:left}
+  .tbl td{padding:9px 10px;border-bottom:.5px solid var(--border);text-align:right;color:var(--text2);font-family:var(--mono);font-size:11px}
+  .tbl td:first-child{text-align:left;color:var(--text);font-size:12px;font-family:var(--sans);font-weight:500}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:var(--surface2)}
+  .tl{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+  .tl-m{text-align:center}
+  .tl-lbl{font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:5px}
+  .tl-bar{min-height:60px;border-radius:6px;background:var(--surface2);padding:5px 3px;display:flex;flex-direction:column;gap:2px;justify-content:center}
+  .tl-tag{font-family:var(--mono);font-size:7px;padding:2px 3px;border-radius:3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .mini-stat{background:var(--surface2);border-radius:8px;padding:10px 12px;text-align:center}
+  .mini-stat .mv{font-family:var(--mono);font-size:16px;font-weight:600}
+  .mini-stat .ml{font-size:10px;color:var(--text3);margin-top:2px}
+  .ads-grid{display:grid;grid-template-columns:1fr auto auto;gap:0 14px;align-items:center}
+  .ads-h{font-family:var(--mono);font-size:8px;text-align:right;padding-bottom:6px;border-bottom:1px solid var(--border2);white-space:nowrap}
+  .ads-lbl{font-size:12px;padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-val{font-family:var(--mono);font-size:12px;font-weight:600;text-align:right;padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-ref{font-family:var(--mono);font-size:11px;text-align:right;color:var(--text3);padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-lbl-sm{font-size:11px;padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-val-sm{font-family:var(--mono);font-size:11px;text-align:right;padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-ref-sm{font-family:var(--mono);font-size:11px;text-align:right;color:var(--text3);padding:6px 0;border-bottom:.5px solid var(--border)}
+  .ads-lbl-last{font-size:11px;padding:6px 0}
+  .ads-val-last{font-family:var(--mono);font-size:11px;text-align:right;padding:6px 0}
+  .ads-ref-last{font-family:var(--mono);font-size:11px;text-align:right;color:var(--text3);padding:6px 0}
+  .ads-note{font-size:9px;color:var(--text3);margin-top:8px;padding-top:6px;border-top:.5px solid var(--border)}
+
+  /* ── Comparison table ── */
+  .cmp-win{background:rgba(26,158,114,0.06)!important}
+  .cmp-total{font-weight:600}
+  .sbadge{display:inline-block;padding:2px 8px;border-radius:10px;font-family:var(--mono);font-size:9px;font-weight:600}
+  .sb-pery{background:var(--orange-dim);color:var(--orange);border:.5px solid var(--orange-border)}
+  .sb-eysin{background:var(--purple-dim);color:var(--purple);border:.5px solid var(--purple-border)}
+  .sb-total{background:var(--blue-dim);color:var(--blue);border:.5px solid rgba(43,114,200,0.2)}
+
+  .footer{padding:16px 32px;border-top:.5px solid var(--border);background:var(--surface);font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;justify-content:space-between}
+  @media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}.tl{grid-template-columns:repeat(6,1fr)}.main{padding:16px}.header{padding:20px 16px;flex-direction:column;gap:12px}.tab-bar{padding:0 12px;overflow-x:auto}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ HEADER ══ -->
+<div class="header">
+  <div>
+    <div class="eyebrow">JBP 2026 · ELHA · CNLS</div>
+    <h1>Perysmith GGP — JBP 2026 Dashboard</h1>
+    <p>Shop ID: 1059744737 &amp; 1290987043 &nbsp;·&nbsp; perysmith_vn_official · eysin_vietnam_mall &nbsp;·&nbsp; Data: Jan–Apr 2026</p>
+  </div>
+  <div style="text-align:right">
+    <div class="badge">GOLD PACKAGE · $34,000/năm (GGP)</div><br>
+    <span class="shop-id">2 shops · GGP Combined FY Target: $2,219,296</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ TABS ══ -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-pery" onclick="setTab('pery')">
+    <span class="dot" style="background:var(--orange)"></span>Perysmith VN Official
+  </button>
+  <button class="tab-btn tab-eysin" id="tab-eysin" onclick="setTab('eysin')">
+    <span class="dot" style="background:var(--purple)"></span>EYSIN Vietnam Mall
+  </button>
+  <button class="tab-btn tab-ggp" id="tab-ggp" onclick="setTab('ggp')">
+    <span class="dot" style="background:var(--blue)"></span>GGP Combined
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════ MAIN ══ -->
+<div class="main">
+
+<!-- ══════════════════════ VIEW: PERYSMITH ══ -->
+<div id="view-pery">
+
+  <!-- KPI ROW -->
+  <div>
+    <div class="sh"><span class="t">KPI Tổng quan — Perysmith (YTD Jan–Apr 2026)</span><div class="l"></div></div>
+    <div class="kpi-row">
+      <div class="kpi g"><div class="lbl">Shop Sales YTD</div><div class="val">$784K</div><div class="sub"><span class="up">▲ 167% vs target</span></div></div>
+      <div class="kpi g"><div class="lbl">ADG (Apr)</div><div class="val">$6,028</div><div class="sub"><span class="down">▼ 5.0% MoM</span></div></div>
+      <div class="kpi b"><div class="lbl">Paid Ads ROAS (Q1)</div><div class="val">10.2x</div><div class="sub"><span class="up">▲ 29% vs Q4'25</span></div></div>
+      <div class="kpi o"><div class="lbl">CIR Actual Q1</div><div class="val">11.7%</div><div class="sub"><span class="up">✓ dưới target 13.4%</span></div></div>
+      <div class="kpi o"><div class="lbl">Total Invest YTD</div><div class="val">$96.7K</div><div class="sub"><span class="up">▲ 168% vs target</span></div></div>
+      <div class="kpi b"><div class="lbl">Live+Video Pene</div><div class="val">41%</div><div class="sub">$74.6K GMV (Apr)</div></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Shop Sales — Actual vs Target (Monthly $K)</div>
+      <canvas id="salesChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="ct">Investment Mix — Actual vs Target Jan–Apr ($)</div>
+      <canvas id="investChart"></canvas>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Achievement % by Channel (YTD Jan–Apr)</div>
+      <div class="prog-list" style="margin-top:4px">
+        <div><div class="prog-lbl"><span>Shop Sales</span><span class="up">167%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--green)"></div></div></div>
+        <div><div class="prog-lbl"><span>AMS</span><span class="up">224%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--green)"></div></div></div>
+        <div><div class="prog-lbl"><span>Paid Ads</span><span class="up">187%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--green)"></div></div></div>
+        <div><div class="prog-lbl"><span>Total Investment</span><span class="up">168%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--green)"></div></div></div>
+        <div><div class="prog-lbl"><span>Cash</span><span class="warn">98%</span></div><div class="prog-track"><div class="prog-fill" style="width:98%;background:#c07c00"></div></div></div>
+        <div><div class="prog-lbl"><span>Offsite (CPAS+GAS)</span><span class="warn">80%</span></div><div class="prog-track"><div class="prog-fill" style="width:80%;background:#c07c00"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Live &amp; Video GMV Breakdown (YTD Jan–Apr $)</div>
+      <canvas id="liveChart"></canvas>
+      <div class="mini-grid">
+        <div class="mini-stat"><div class="mv" style="color:var(--green)">$317K</div><div class="ml">Total Live+Video GMV</div></div>
+        <div class="mini-stat"><div class="mv" style="color:var(--orange)">~40%</div><div class="ml">Penetration avg</div></div>
+        <div class="mini-stat"><div class="mv" style="color:var(--blue)">$172K</div><div class="ml">KOL Live (54%)</div></div>
+        <div class="mini-stat"><div class="mv">$106K</div><div class="ml">Seller Live (33%)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL TABLE -->
+  <div class="card">
+    <div class="ct">Detail Performance — Monthly (Jan–Apr 2026)</div>
+    <table class="tbl">
+      <thead><tr><th>Metric</th><th>YTD Jan–Apr</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>FY / CIR Target</th><th>Achievement</th></tr></thead>
+      <tbody>
+        <tr><td>Shop Sales ($)</td><td style="color:var(--green);font-weight:600">$783,586</td><td>$236,339</td><td>$169,707</td><td>$196,692</td><td style="color:var(--green)">$180,848</td><td>—</td><td style="color:var(--green)">167% YTD</td></tr>
+        <tr><td>Sales Achieved (%)</td><td style="color:var(--green)">167%</td><td style="color:var(--green)">198%</td><td style="color:var(--green)">149%</td><td style="color:var(--green)">179%</td><td style="color:var(--green)">144%</td><td>—</td><td>—</td></tr>
+        <tr><td>Total Investment ($)</td><td>$96,745</td><td>$26,917</td><td>$17,975</td><td>$25,411</td><td>$26,442</td><td>—</td><td style="color:var(--green)">168%</td></tr>
+        <tr><td>Cash ($)</td><td>$15,232</td><td>$4,033</td><td>$2,833</td><td>$4,033</td><td>$4,333</td><td>~$15,588</td><td style="color:var(--yellow)">98%</td></tr>
+        <tr><td>Paid Ads ($)</td><td>$64,899</td><td>$15,708</td><td>$12,424</td><td>$18,251</td><td>$18,516</td><td>~$34,700</td><td style="color:var(--green)">187%</td></tr>
+        <tr><td>AMS ($)</td><td>$14,708</td><td>$6,284</td><td>$2,427</td><td>$2,672</td><td>$3,325</td><td>~$6,558</td><td style="color:var(--green)">224%</td></tr>
+        <tr><td>Offsite ($)</td><td>$1,904</td><td>$891</td><td>$291</td><td>$455</td><td>$267</td><td>~$2,386</td><td style="color:var(--yellow)">80%</td></tr>
+        <tr><td>CIR Actual (%)</td><td style="color:var(--green);font-weight:600">11.7% (Q1)</td><td>11.4%</td><td>10.6%</td><td>12.9%</td><td style="color:var(--yellow)">14.6%</td><td>13.4% FY</td><td style="color:var(--green)">✓ Under Q1</td></tr>
+        <tr><td>Live+Video GMV ($)</td><td style="color:var(--blue);font-weight:600">$316,606</td><td>$119,140</td><td>$62,713</td><td>$60,145</td><td>$74,608</td><td>—</td><td style="color:var(--blue)">~40% pene</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ADS PERFORMANCE -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Paid Ads (Non-content) — Q1'26 vs Q4'25</div>
+      <div class="ads-grid">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"></div>
+        <div class="ads-h" style="color:var(--orange)">Q1 '26</div>
+        <div class="ads-h">Q4 '25</div>
+        <div class="ads-lbl" style="color:var(--text2)">Ads Spend</div><div class="ads-val">$46,383</div><div class="ads-ref">$64,522</div>
+        <div class="ads-lbl" style="color:var(--text2)">Ads GMV</div><div class="ads-val" style="color:var(--green)">$473,346</div><div class="ads-ref">~$510K*</div>
+        <div class="ads-lbl" style="color:var(--text2)">ROAS</div><div class="ads-val" style="color:var(--green)">10.2x <span style="font-size:9px">▲29%</span></div><div class="ads-ref">7.9x*</div>
+        <div class="ads-lbl" style="color:var(--text2)">CTR</div><div class="ads-val">5.0%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">CR</div><div class="ads-val">2.7%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">% Ads GMV / Sales</div><div class="ads-val" style="color:var(--orange)">97.2%</div><div class="ads-ref">~82.6%*</div>
+        <div class="ads-lbl" style="color:var(--text2)">Impressions</div><div class="ads-val">8.0M</div><div class="ads-ref">—</div>
+        <div class="ads-lbl-sm" style="color:var(--text3)">Apr ROAS</div><div class="ads-val-sm" style="color:var(--yellow)">7.6x ▼</div><div class="ads-ref-sm">—</div>
+        <div class="ads-lbl-last" style="color:var(--text3)">Apr CTR</div><div class="ads-val-last" style="color:var(--yellow)">2.5% ▼</div><div class="ads-ref-last">—</div>
+      </div>
+      <div class="ads-note">* Q4'25 GMV, ROAS, % GMV: ước tính từ FY 2025 average (ROAS 7.9x)</div>
+    </div>
+    <div class="card">
+      <div class="ct">AMS Performance — Q1'26 vs Q4'25</div>
+      <div class="ads-grid">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"></div>
+        <div class="ads-h" style="color:var(--orange)">Q1 '26</div>
+        <div class="ads-h">Q4 '25</div>
+        <div class="ads-lbl" style="color:var(--text2)">AMS Spend</div><div class="ads-val">$11,383</div><div class="ads-ref">$18,994</div>
+        <div class="ads-lbl" style="color:var(--text2)">Direct GMV</div><div class="ads-val" style="color:var(--green)">$186,728</div><div class="ads-ref">~$179K*</div>
+        <div class="ads-lbl" style="color:var(--text2)">ROAS</div><div class="ads-val" style="color:var(--green)">16.4x <span style="font-size:9px">▲74%</span></div><div class="ads-ref">9.4x*</div>
+        <div class="ads-lbl" style="color:var(--text2)">Avg Commission</div><div class="ads-val">7.7%</div><div class="ads-ref">2.0%*</div>
+        <div class="ads-lbl" style="color:var(--text2)">ABS</div><div class="ads-val">$37</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">Item Sold</div><div class="ads-val">5,043</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">% GMV / Sales</div><div class="ads-val" style="color:var(--orange)">38%</div><div class="ads-ref">~29%*</div>
+        <div class="ads-lbl-sm" style="color:var(--text3)">Apr Commission</div><div class="ads-val-sm" style="color:var(--green)">8.0%</div><div class="ads-ref-sm">—</div>
+        <div class="ads-lbl-last" style="color:var(--text3)">Apr ROAS</div><div class="ads-val-last" style="color:var(--green)">16.6x</div><div class="ads-ref-last">—</div>
+      </div>
+      <div class="ads-note">* Q4'25 GMV, ROAS, Commission: ước tính từ FY 2025 average (ROAS 9.4x, Commission 2.0%)</div>
+    </div>
+  </div>
+
+</div><!-- /view-pery -->
+
+
+<!-- ══════════════════════ VIEW: EYSIN ══ -->
+<div id="view-eysin" style="display:none">
+
+  <!-- KPI ROW -->
+  <div>
+    <div class="sh"><span class="t">KPI Tổng quan — EYSIN Vietnam Mall (YTD Jan–Apr 2026)</span><div class="l"></div></div>
+    <div class="kpi-row">
+      <div class="kpi g"><div class="lbl">Shop Sales YTD</div><div class="val">$317K</div><div class="sub"><span class="up">▲ 264% vs target</span></div></div>
+      <div class="kpi g"><div class="lbl">ADG (Apr)</div><div class="val">$2,568</div><div class="sub"><span class="down">▼ 0.8% MoM</span></div></div>
+      <div class="kpi p"><div class="lbl">Paid Ads ROAS (Q1)</div><div class="val">7.3x</div><div class="sub"><span class="up">▲ 30% vs Q4'25</span></div></div>
+      <div class="kpi o"><div class="lbl">CIR Actual Q1</div><div class="val">13.3%</div><div class="sub"><span class="up">✓ dưới target 13.5%</span></div></div>
+      <div class="kpi o"><div class="lbl">Total Invest YTD</div><div class="val">$41.7K</div><div class="sub"><span class="up">▲ 257% vs target</span></div></div>
+      <div class="kpi p"><div class="lbl">Live+Video Pene</div><div class="val">52%</div><div class="sub">$37.5K GMV (Apr)</div></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Shop Sales — Actual vs Target (Monthly $K)</div>
+      <canvas id="salesChart2"></canvas>
+    </div>
+    <div class="card">
+      <div class="ct">Investment Mix — Actual vs Target Jan–Apr ($)</div>
+      <canvas id="investChart2"></canvas>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Achievement % by Channel (YTD Jan–Apr)</div>
+      <div class="prog-list" style="margin-top:4px">
+        <div><div class="prog-lbl"><span>Shop Sales</span><span class="up">264%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--purple)"></div></div></div>
+        <div><div class="prog-lbl"><span>Paid Ads</span><span class="up">289%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--purple)"></div></div></div>
+        <div><div class="prog-lbl"><span>AMS</span><span class="up">196%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--purple)"></div></div></div>
+        <div><div class="prog-lbl"><span>Total Investment</span><span class="up">257%</span></div><div class="prog-track"><div class="prog-fill" style="width:100%;background:var(--purple)"></div></div></div>
+        <div><div class="prog-lbl"><span>Cash</span><span style="color:var(--text3)">N/A (target $0)</span></div><div class="prog-track"><div class="prog-fill" style="width:0%"></div></div></div>
+        <div><div class="prog-lbl"><span>Offsite</span><span class="warn">0% — not active</span></div><div class="prog-track"><div class="prog-fill" style="width:0%"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Live &amp; Video GMV Breakdown (YTD Jan–Apr $)</div>
+      <canvas id="liveChart2"></canvas>
+      <div class="mini-grid">
+        <div class="mini-stat"><div class="mv" style="color:var(--green)">$166K</div><div class="ml">Total Live+Video GMV</div></div>
+        <div class="mini-stat"><div class="mv" style="color:var(--purple)">~52%</div><div class="ml">Penetration avg</div></div>
+        <div class="mini-stat"><div class="mv" style="color:var(--blue)">$101K</div><div class="ml">KOL Live (61%)</div></div>
+        <div class="mini-stat"><div class="mv" style="color:var(--purple)">$46K</div><div class="ml">Seller Live (28%)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL TABLE -->
+  <div class="card">
+    <div class="ct">Detail Performance — Monthly (Jan–Apr 2026)</div>
+    <table class="tbl">
+      <thead><tr><th>Metric</th><th>YTD Jan–Apr</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>FY / CIR Target</th><th>Achievement</th></tr></thead>
+      <tbody>
+        <tr><td>Shop Sales ($)</td><td style="color:var(--green);font-weight:600">$316,801</td><td>$93,489</td><td>$68,610</td><td>$77,668</td><td style="color:var(--green)">$77,034</td><td>—</td><td style="color:var(--green)">264% YTD</td></tr>
+        <tr><td>Sales Achieved (%)</td><td style="color:var(--green)">264%</td><td style="color:var(--green)">300%</td><td style="color:var(--green)">257%</td><td style="color:var(--green)">250%</td><td style="color:var(--green)">248%</td><td>—</td><td>—</td></tr>
+        <tr><td>Total Investment ($)</td><td>$41,677</td><td>$15,110</td><td>$7,201</td><td>$9,495</td><td>$9,871</td><td>—</td><td style="color:var(--green)">257%</td></tr>
+        <tr><td>Cash ($)</td><td>$1,500</td><td>$0</td><td>$0</td><td>$0</td><td>$1,500</td><td>$0 target</td><td>—</td></tr>
+        <tr><td>Paid Ads ($)</td><td>$29,998</td><td>$11,505</td><td>$4,894</td><td>$7,605</td><td>$5,994</td><td>~$48,653 FY</td><td style="color:var(--green)">289%</td></tr>
+        <tr><td>AMS ($)</td><td>$10,179</td><td>$3,605</td><td>$2,307</td><td>$1,890</td><td>$2,377</td><td>~$24,327 FY</td><td style="color:var(--green)">196%</td></tr>
+        <tr><td>Offsite ($)</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>$0</td><td>~$3,036 FY</td><td style="color:var(--yellow)">0%</td></tr>
+        <tr><td>CIR Actual (%)</td><td style="color:var(--green);font-weight:600">13.3% (Q1)</td><td style="color:var(--yellow)">16.2%</td><td style="color:var(--green)">10.5%</td><td style="color:var(--green)">12.2%</td><td style="color:var(--green)">12.8%</td><td>13.5% FY</td><td style="color:var(--green)">✓ Under Q1</td></tr>
+        <tr><td>Live+Video GMV ($)</td><td style="color:var(--purple);font-weight:600">$165,571</td><td>$51,394</td><td>$42,469</td><td>$34,252</td><td>$37,456</td><td>—</td><td style="color:var(--purple)">~52% pene</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ADS PERFORMANCE EYSIN -->
+  <div class="two">
+    <div class="card">
+      <div class="ct">Paid Ads (Non-content) — Q1'26 vs Q4'25</div>
+      <div class="ads-grid">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"></div>
+        <div class="ads-h" style="color:var(--purple)">Q1 '26</div>
+        <div class="ads-h">Q4 '25</div>
+        <div class="ads-lbl" style="color:var(--text2)">Ads Spend</div><div class="ads-val">$24,004</div><div class="ads-ref">~$31.2K</div>
+        <div class="ads-lbl" style="color:var(--text2)">Ads GMV</div><div class="ads-val" style="color:var(--green)">$176,115</div><div class="ads-ref">~$174.7K*</div>
+        <div class="ads-lbl" style="color:var(--text2)">ROAS</div><div class="ads-val" style="color:var(--green)">7.3x <span style="font-size:9px">▲30%</span></div><div class="ads-ref">~5.6x*</div>
+        <div class="ads-lbl" style="color:var(--text2)">CTR</div><div class="ads-val">2.8%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">CR</div><div class="ads-val">3.8%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">% Ads GMV / Sales</div><div class="ads-val" style="color:var(--orange)">73.5%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">Impressions</div><div class="ads-val">4.4M</div><div class="ads-ref">—</div>
+        <div class="ads-lbl-sm" style="color:var(--text3)">Apr ROAS</div><div class="ads-val-sm" style="color:var(--green)">8.1x ▲</div><div class="ads-ref-sm">—</div>
+        <div class="ads-lbl-last" style="color:var(--text3)">Apr CTR</div><div class="ads-val-last" style="color:var(--yellow)">2.5% ▼</div><div class="ads-ref-last">—</div>
+      </div>
+      <div class="ads-note">* Q4'25 GMV, ROAS: ước tính từ FY 2025 average (Paid Ads ROAS FY 2025 = 5.6x)</div>
+    </div>
+    <div class="card">
+      <div class="ct">AMS Performance — Q1'26 vs Q4'25</div>
+      <div class="ads-grid">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2)"></div>
+        <div class="ads-h" style="color:var(--purple)">Q1 '26</div>
+        <div class="ads-h">Q4 '25</div>
+        <div class="ads-lbl" style="color:var(--text2)">AMS Spend</div><div class="ads-val">$7,803</div><div class="ads-ref">~$5.6K</div>
+        <div class="ads-lbl" style="color:var(--text2)">Direct GMV</div><div class="ads-val" style="color:var(--green)">$90,249</div><div class="ads-ref">~$52.6K*</div>
+        <div class="ads-lbl" style="color:var(--text2)">ROAS</div><div class="ads-val" style="color:var(--green)">11.6x <span style="font-size:9px">▲23%</span></div><div class="ads-ref">~9.4x*</div>
+        <div class="ads-lbl" style="color:var(--text2)">Avg Commission</div><div class="ads-val">9.0%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">ABS</div><div class="ads-val">$34</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">Item Sold</div><div class="ads-val">2,696</div><div class="ads-ref">—</div>
+        <div class="ads-lbl" style="color:var(--text2)">% GMV / Sales</div><div class="ads-val" style="color:var(--orange)">37.6%</div><div class="ads-ref">—</div>
+        <div class="ads-lbl-sm" style="color:var(--text3)">Apr Commission</div><div class="ads-val-sm" style="color:var(--green)">11.0%</div><div class="ads-ref-sm">—</div>
+        <div class="ads-lbl-last" style="color:var(--text3)">Apr ROAS</div><div class="ads-val-last" style="color:var(--green)">10.4x</div><div class="ads-ref-last">—</div>
+      </div>
+      <div class="ads-note">* Q4'25: ước tính từ FY 2025 average (AMS ROAS FY 2025 = 9.4x)</div>
+    </div>
+  </div>
+
+</div><!-- /view-eysin -->
+
+
+<!-- ══════════════════════ VIEW: GGP COMBINED ══ -->
+<div id="view-ggp" style="display:none">
+
+  <!-- COMBINED KPIs -->
+  <div>
+    <div class="sh"><span class="t">GGP KPI Tổng hợp (YTD Jan–Apr 2026 · 2 Shops)</span><div class="l"></div></div>
+    <div class="kpi-row">
+      <div class="kpi g"><div class="lbl">GGP Sales YTD</div><div class="val">$1.10M</div><div class="sub"><span class="up">▲ 187% vs target</span></div></div>
+      <div class="kpi g"><div class="lbl">Combined ADG Apr</div><div class="val">$8,596</div><div class="sub">Pery $6.0K + EYSIN $2.6K</div></div>
+      <div class="kpi b"><div class="lbl">Best ROAS (Pery PA)</div><div class="val">10.2x</div><div class="sub">EYSIN Paid Ads: 7.3x</div></div>
+      <div class="kpi o"><div class="lbl">GGP CIR Q1</div><div class="val">12.1%</div><div class="sub"><span class="up">✓ cả 2 dưới target</span></div></div>
+      <div class="kpi o"><div class="lbl">Total Invest YTD</div><div class="val">$138K</div><div class="sub">Pery $96.7K + EYSIN $41.7K</div></div>
+      <div class="kpi b"><div class="lbl">GGP Live+Video</div><div class="val">44%</div><div class="sub">$482K total GMV YTD</div></div>
+    </div>
+  </div>
+
+  <!-- ★ BẢNG SO SÁNH 2 SELLER ★ -->
+  <div class="card">
+    <div class="ct">GGP Performance Comparison — Jan–Apr 2026 (Bảng So Sánh 2 Seller)</div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="text-align:left">Metric</th>
+          <th><span class="sbadge sb-pery">PERYSMITH VN</span></th>
+          <th><span class="sbadge sb-eysin">EYSIN VIETNAM</span></th>
+          <th><span class="sbadge sb-total">GGP TOTAL</span></th>
+          <th style="text-align:left">Ghi chú</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Shop Sales YTD ($)</td>
+          <td class="cmp-win">$783,586</td>
+          <td>$316,801</td>
+          <td class="cmp-total" style="color:var(--blue)">$1,100,387</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Pery 71% / EYSIN 29% contribution</td>
+        </tr>
+        <tr>
+          <td>FY Target 2026 ($)</td>
+          <td>$1,656,891</td>
+          <td>$562,405</td>
+          <td class="cmp-total" style="color:var(--blue)">$2,219,296</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Run rate Jan–Apr on track</td>
+        </tr>
+        <tr>
+          <td>YTD Achievement (%)</td>
+          <td style="color:var(--green)">167%</td>
+          <td class="cmp-win" style="color:var(--green)">264%</td>
+          <td class="cmp-total" style="color:var(--green)">187%</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">vs cumulative monthly target</td>
+        </tr>
+        <tr>
+          <td>ADG April ($)</td>
+          <td class="cmp-win">$6,028</td>
+          <td>$2,568</td>
+          <td class="cmp-total" style="color:var(--blue)">$8,596</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Combined daily revenue rate</td>
+        </tr>
+        <tr>
+          <td>Total Invest YTD ($)</td>
+          <td class="cmp-win">$96,745</td>
+          <td>$41,677</td>
+          <td class="cmp-total" style="color:var(--blue)">$138,422</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Pery 70% / EYSIN 30% spend share</td>
+        </tr>
+        <tr>
+          <td>CIR Q1 (%)</td>
+          <td class="cmp-win">11.7%</td>
+          <td>13.3%</td>
+          <td class="cmp-total" style="color:var(--blue)">12.1%</td>
+          <td style="text-align:left;font-size:11px;color:var(--green)">✓ Cả 2 dưới target 13.5%</td>
+        </tr>
+        <tr>
+          <td>Paid Ads Spend YTD ($)</td>
+          <td class="cmp-win">$64,899</td>
+          <td>$29,998</td>
+          <td class="cmp-total" style="color:var(--blue)">$94,897</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Cả 2 đều over YTD target</td>
+        </tr>
+        <tr>
+          <td>Paid Ads ROAS Q1</td>
+          <td class="cmp-win" style="color:var(--green)">10.2x</td>
+          <td style="color:var(--green)">7.3x</td>
+          <td class="cmp-total" style="color:var(--text3)">—</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Pery stronger — khác loại sản phẩm</td>
+        </tr>
+        <tr>
+          <td>AMS Spend YTD ($)</td>
+          <td class="cmp-win">$14,708</td>
+          <td>$10,179</td>
+          <td class="cmp-total" style="color:var(--blue)">$24,887</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">—</td>
+        </tr>
+        <tr>
+          <td>AMS ROAS Q1</td>
+          <td class="cmp-win" style="color:var(--green)">16.4x</td>
+          <td style="color:var(--green)">11.6x</td>
+          <td class="cmp-total" style="color:var(--text3)">—</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Pery commission efficiency cao hơn</td>
+        </tr>
+        <tr>
+          <td>Live+Video GMV YTD ($)</td>
+          <td class="cmp-win">$316,606</td>
+          <td>$165,571</td>
+          <td class="cmp-total" style="color:var(--blue)">$482,177</td>
+          <td style="text-align:left;font-size:11px;color:var(--text2)">Pery 66% / EYSIN 34% of total</td>
+        </tr>
+        <tr>
+          <td>Live+Video Penetration</td>
+          <td>~40%</td>
+          <td class="cmp-win">~52%</td>
+          <td class="cmp-total" style="color:var(--blue)">~44%</td>
+          <td style="text-align:left;font-size:11px;color:var(--green)">EYSIN phụ thuộc content cao hơn</td>
+        </tr>
+        <tr>
+          <td>Offsite (CPAS+GAS) YTD</td>
+          <td class="cmp-win">$1,904</td>
+          <td style="color:var(--yellow)">$0</td>
+          <td class="cmp-total">$1,904</td>
+          <td style="text-align:left;font-size:11px;color:var(--yellow)">EYSIN chưa active offsite ads</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:10px;color:var(--text3);margin-top:10px;padding-top:8px;border-top:.5px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(26,158,114,0.1);border:.5px solid rgba(26,158,114,0.3)"></div><span>Highlighted cell = stronger performer on that metric</span></div>
+      <div style="color:var(--blue)">■ GGP Total = sum of both sellers</div>
+    </div>
+  </div>
+
+  <!-- GGP COMBINED SALES CHART -->
+  <div class="card">
+    <div class="ct">GGP Monthly Sales — Perysmith vs EYSIN (Jan–Apr 2026, $K, Stacked)</div>
+    <canvas id="ggpSalesChart"></canvas>
+  </div>
+
+  <!-- PORTFOLIO ALERTS -->
+  <div class="card">
+    <div class="ct">GGP Portfolio Signals</div>
+    <div class="alert ag"><span class="ai">✓</span><div><strong>Cả 2 seller vượt target:</strong> Perysmith 167% | EYSIN 264% YTD. GGP combined $1.10M vs $588K target = 187%.</div></div>
+    <div class="alert ag"><span class="ai">✓</span><div><strong>CIR healthy toàn GGP:</strong> Combined Q1 CIR 12.1% — cả 2 shop dưới target 13.5%. EYSIN CIR đang cải thiện (16.2% Jan → 12.8% Apr).</div></div>
+    <div class="alert ay"><span class="ai">!</span><div><strong>EYSIN Offsite = $0:</strong> Chưa activate CPAS/GAS dù FY target là $3,036. Cần check có vào plan Q2 không.</div></div>
+    <div class="alert ay"><span class="ai">!</span><div><strong>Perysmith CIR Apr = 14.6%:</strong> Vượt target 13.4%. Spend tháng 4 cao — cần kiểm tra phân bổ Paid Ads / Cash Apr. EYSIN Apr CIR ổn 12.8%.</div></div>
+  </div>
+
+</div><!-- /view-ggp -->
+
+
+<!-- ══════════════════════ STATIC SECTIONS (always shown) ══ -->
+
+<!-- FOC / MANAGED SHOPS TABLE -->
+<div class="card">
+  <div class="ct">Shop &amp; FOC Package Status — GGP Managed Shops</div>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th style="text-align:left">Shop ID</th>
+        <th style="text-align:left">Username</th>
+        <th style="text-align:left">Segment</th>
+        <th>JBP Tier</th>
+        <th>2.2 FOC</th>
+        <th>5.5 FOC</th>
+        <th>Brand Day Q3</th>
+        <th>Brand Day Q4</th>
+        <th style="text-align:left">BD Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:var(--mono);font-size:11px">1059744737</td>
+        <td>perysmith_vn_official &nbsp;<span class="sbadge sb-pery">MAIN</span></td>
+        <td style="color:var(--text2);font-size:11px">2.Short tail</td>
+        <td style="color:var(--orange);font-weight:600">Gold</td>
+        <td style="color:var(--green)">Platinum ✓</td>
+        <td style="color:var(--green)">Gold ✓</td>
+        <td style="color:var(--green)">BD2 Sep ✓</td>
+        <td style="color:var(--green)">BD2 Nov ✓</td>
+        <td style="text-align:left;font-size:11px;color:var(--text2)">Dec: HQ Traffic</td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--mono);font-size:11px">1290987043</td>
+        <td>eysin_vietnam_mall &nbsp;<span class="sbadge sb-eysin">SUB</span></td>
+        <td style="color:var(--text3);font-size:11px">Sub-shop</td>
+        <td style="color:var(--orange);font-weight:600">Gold</td>
+        <td style="color:var(--text3)">—</td>
+        <td style="color:var(--text3)">—</td>
+        <td style="color:var(--text3)">—</td>
+        <td style="color:var(--text3)">—</td>
+        <td style="text-align:left;font-size:11px;color:var(--text3)">—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TIMELINE -->
+<div class="card">
+  <div class="ct">JBP Gold — Benefit Activation Timeline 2026</div>
+  <div class="tl" id="tl" style="margin-top:8px"></div>
+  <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(224,90,32,0.7)"></div><span style="font-size:10px;color:var(--text3)">Campaign/Package</span></div>
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(43,114,200,0.7)"></div><span style="font-size:10px;color:var(--text3)">Pacing / Deadline</span></div>
+    <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(26,158,114,0.7)"></div><span style="font-size:10px;color:var(--text3)">Confirmed</span></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  <span>Perysmith GGP · JBP Gold 2026 · Shop ID: 1059744737 &amp; 1290987043</span>
+  <span>Source: Joey JBP Tracker · Sheet 3.1 Shop level · Updated May 2026</span>
+</div>
+
+<script>
+// ─── Tab switching ───────────────────────────────────────────
+let eysinInit = false, ggpInit = false;
+
+function setTab(tab) {
+  ['pery','eysin','ggp'].forEach(v => {
+    document.getElementById('view-'+v).style.display = (v===tab) ? '' : 'none';
+    const btn = document.getElementById('tab-'+v);
+    btn.classList.toggle('active', v===tab);
+  });
+  if (tab==='eysin' && !eysinInit) { initEysinCharts(); eysinInit=true; }
+  if (tab==='ggp'   && !ggpInit)   { initGGPChart();    ggpInit=true; }
+}
+
+// ─── Shared chart defaults ────────────────────────────────────
+const mono = {family:'IBM Plex Mono',size:10};
+const gridC = 'rgba(0,0,0,0.05)';
+const tickC = '#999';
+
+// ─── Perysmith charts ─────────────────────────────────────────
+new Chart(document.getElementById('salesChart'), {
+  type:'bar',
+  data:{
+    labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    datasets:[
+      {
+        label:'Actual ($K)',
+        data:[236.3,169.7,196.7,180.8,55.0,null,null,null,null,null,null,null],
+        backgroundColor: ctx => {
+          const tgt=[119.1,114.2,109.6,125.3,130.2];
+          if(ctx.dataIndex>4||ctx.raw===null) return 'rgba(0,0,0,0.05)';
+          return ctx.raw>=tgt[ctx.dataIndex]?'rgba(26,158,114,0.75)':'rgba(192,124,0,0.75)';
+        },
+        borderRadius:4, order:1
+      },
+      {label:'Target ($K)',data:[119.1,114.2,109.6,125.3,130.2,null,null,null,null,null,null,null],
+        type:'line',borderColor:'rgba(224,90,32,0.5)',backgroundColor:'transparent',
+        borderWidth:1.5,pointRadius:3,pointBackgroundColor:'rgba(224,90,32,0.8)',tension:0.3,order:0}
+    ]
+  },
+  options:{responsive:true,plugins:{legend:{labels:{color:tickC,font:mono,boxWidth:10,padding:12}}},
+    scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:mono}},y:{grid:{color:gridC},ticks:{color:tickC,font:mono,callback:v=>'$'+v+'K'}}}}
+});
+
+new Chart(document.getElementById('investChart'), {
+  type:'bar',
+  data:{labels:['Cash','Paid Ads','AMS','Offsite'],
+    datasets:[
+      {label:'Actual',data:[15232,64899,14708,1904],
+        backgroundColor:['rgba(224,90,32,0.7)','rgba(26,158,114,0.7)','rgba(26,158,114,0.7)','rgba(192,124,0,0.5)'],borderRadius:4},
+      {label:'Target',data:[15588,34700,6558,2386],backgroundColor:'rgba(0,0,0,0.07)',borderRadius:4}
+    ]},
+  options:{responsive:true,plugins:{legend:{labels:{color:tickC,font:mono,boxWidth:10,padding:12}}},
+    scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:mono}},y:{grid:{color:gridC},ticks:{color:tickC,font:mono,callback:v=>'$'+(v/1000).toFixed(0)+'K'}}}}
+});
+
+new Chart(document.getElementById('liveChart'), {
+  type:'doughnut',
+  data:{labels:['KOL Live','Seller Live','KOL Video','Seller Video'],
+    datasets:[{data:[171535,106371,31406,7294],
+      backgroundColor:['rgba(43,114,200,0.8)','rgba(26,158,114,0.75)','rgba(224,90,32,0.7)','rgba(192,124,0,0.65)'],
+      borderWidth:2,borderColor:'#fff'}]},
+  options:{responsive:true,cutout:'62%',
+    plugins:{legend:{position:'right',labels:{color:'#5a5a5a',font:{family:'IBM Plex Mono',size:9},boxWidth:10,padding:10}}}}
+});
+
+// ─── EYSIN charts (lazy) ─────────────────────────────────────
+function initEysinCharts() {
+  new Chart(document.getElementById('salesChart2'), {
+    type:'bar',
+    data:{
+      labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      datasets:[
+        {
+          label:'Actual ($K)',
+          data:[93.5,68.6,77.7,77.0,null,null,null,null,null,null,null,null],
+          backgroundColor: ctx => {
+            const tgt=[31.1,26.7,31.1,31.1,33.3];
+            if(ctx.dataIndex>4||ctx.raw===null) return 'rgba(0,0,0,0.05)';
+            return ctx.raw>=tgt[ctx.dataIndex]?'rgba(124,58,237,0.65)':'rgba(192,124,0,0.75)';
+          },
+          borderRadius:4, order:1
+        },
+        {label:'Target ($K)',data:[31.1,26.7,31.1,31.1,33.3,null,null,null,null,null,null,null],
+          type:'line',borderColor:'rgba(124,58,237,0.4)',backgroundColor:'transparent',
+          borderWidth:1.5,pointRadius:3,pointBackgroundColor:'rgba(124,58,237,0.7)',tension:0.3,order:0}
+      ]
+    },
+    options:{responsive:true,plugins:{legend:{labels:{color:tickC,font:mono,boxWidth:10,padding:12}}},
+      scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:mono}},y:{grid:{color:gridC},ticks:{color:tickC,font:mono,callback:v=>'$'+v+'K'}}}}
+  });
+
+  new Chart(document.getElementById('investChart2'), {
+    type:'bar',
+    data:{labels:['Cash','Paid Ads','AMS','Offsite'],
+      datasets:[
+        {label:'Actual (Jan–Apr)',data:[1500,29998,10179,0],
+          backgroundColor:['rgba(192,124,0,0.5)','rgba(124,58,237,0.65)','rgba(124,58,237,0.65)','rgba(150,150,150,0.25)'],borderRadius:4},
+        {label:'Target (Jan–Apr)',data:[0,10384,5192,648],backgroundColor:'rgba(0,0,0,0.07)',borderRadius:4}
+      ]},
+    options:{responsive:true,plugins:{legend:{labels:{color:tickC,font:mono,boxWidth:10,padding:12}}},
+      scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:mono}},y:{grid:{color:gridC},ticks:{color:tickC,font:mono,callback:v=>'$'+(v/1000).toFixed(1)+'K'}}}}
+  });
+
+  new Chart(document.getElementById('liveChart2'), {
+    type:'doughnut',
+    data:{labels:['KOL Live','Seller Live','KOL Video','Seller Video'],
+      datasets:[{data:[101413,45709,16248,2201],
+        backgroundColor:['rgba(43,114,200,0.8)','rgba(124,58,237,0.7)','rgba(224,90,32,0.7)','rgba(192,124,0,0.65)'],
+        borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{color:'#5a5a5a',font:{family:'IBM Plex Mono',size:9},boxWidth:10,padding:10}}}}
+  });
+}
+
+// ─── GGP Combined chart (lazy) ────────────────────────────────
+function initGGPChart() {
+  new Chart(document.getElementById('ggpSalesChart'), {
+    type:'bar',
+    data:{
+      labels:['Jan','Feb','Mar','Apr'],
+      datasets:[
+        {label:'Perysmith ($K)',data:[236.3,169.7,196.7,180.8],
+          backgroundColor:'rgba(224,90,32,0.72)',borderRadius:4,stack:'s'},
+        {label:'EYSIN ($K)',data:[93.5,68.6,77.7,77.0],
+          backgroundColor:'rgba(124,58,237,0.62)',borderRadius:4,stack:'s'}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{labels:{color:tickC,font:mono,boxWidth:10,padding:12}},
+        tooltip:{callbacks:{
+          footer: items => 'GGP Total: $'+items.reduce((a,i)=>a+(i.raw||0),0).toFixed(1)+'K'
+        }}
+      },
+      scales:{
+        x:{grid:{color:gridC},ticks:{color:tickC,font:mono},stacked:true},
+        y:{grid:{color:gridC},ticks:{color:tickC,font:mono,callback:v=>'$'+v+'K'},stacked:true}
+      }
+    }
+  });
+}
+
+// ─── Timeline ─────────────────────────────────────────────────
+const evts = {
+  0:[{t:'Sales 198%↑',c:'green'}],
+  1:[{t:'2.2 Platinum',c:'orange'},{t:'Sales 149%↑',c:'green'}],
+  2:[{t:'Sales 179%↑',c:'green'}],
+  3:[{t:'Sales 144%↑',c:'green'}],
+  4:[{t:'5.5 Gold',c:'orange'}],
+  5:[],6:[],7:[],
+  8:[{t:'BD2 Sep',c:'green'}],
+  9:[],
+  10:[{t:'BD2 Nov',c:'green'}],
+  11:[{t:'HQ Traffic',c:'blue'}]
+};
+const cm = {
+  orange:{bg:'rgba(224,90,32,0.1)',bd:'rgba(224,90,32,0.3)',tx:'#e05a20'},
+  green:{bg:'rgba(26,158,114,0.1)',bd:'rgba(26,158,114,0.3)',tx:'#1a9e72'},
+  blue:{bg:'rgba(43,114,200,0.1)',bd:'rgba(43,114,200,0.3)',tx:'#2b72c8'}
+};
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+document.getElementById('tl').innerHTML=months.map((m,i)=>{
+  const past=i<4,cur=i===4,ev=evts[i]||[];
+  return`<div class="tl-m">
+    <div class="tl-lbl" style="${cur?'color:var(--orange);font-weight:600':''}">${m}</div>
+    <div class="tl-bar" style="background:${past?'rgba(26,158,114,0.05)':'var(--surface2)'}">
+      ${ev.map(e=>{const c=cm[e.c];return`<div class="tl-tag" style="background:${c.bg};border:.5px solid ${c.bd};color:${c.tx}">${e.t}</div>`;}).join('')}
+      ${ev.length===0?`<div style="font-family:var(--mono);font-size:8px;color:var(--text3);text-align:center">—</div>`:''}
+    </div>
+  </div>`;
+}).join('');
+</script>
+</body>
+</html>
